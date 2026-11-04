@@ -6,10 +6,6 @@
 
 MobileClip::MobileClip(const string &model_name) {
     string model_path = "../models/" + model_name + "_export/";
-    image_encoder.opt.use_vulkan_compute = true;
-    text_encoder.opt.use_vulkan_compute = true;
-    projection.opt.use_vulkan_compute = true;
-
 
     image_encoder.load_param((model_path + "image_encoder.ncnn.param").c_str());
     image_encoder.load_model((model_path + "image_encoder.ncnn.bin").c_str());
