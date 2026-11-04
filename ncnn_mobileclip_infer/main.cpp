@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     }
 
     SimpleTokenizer tokenizer("bpe_simple_vocab_16e6.txt");
-    MobileClip model("mobileclip_s0");
+    MobileClip model("mobileclip_s2");
 
     // 从命令行参数读取图片路径
     std::string image_path = argv[1];
