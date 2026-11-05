@@ -1,40 +1,36 @@
 #version 450
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(binding = 0, rgba8) readonly uniform image2D uSrc;
-layout(std430, binding = 1) writeonly buffer OutBuf {
-    float out_data[];
-};
+layout(binding = 0) uniform sampler2D srcImg;
 
-layout(push_constant) uniform PC {
-    ivec2 srcSize;
-    vec2  scale[5];
-    vec2  offset[5];
-    vec3  mean, invStd;
+layout(std430, binding = 1) writeonly buffer OutBuf {
+    float data[];
+} outBuf;
+
+layout(push_constant, std430) uniform PC {
+    vec4 crop[5];
+    vec4 mean;
+    vec4 invStd;
+    vec4 reserved;
 } pc;
 
-const int CSTEP = 50176; // 224*224
+const uint OW = 224u;
+const uint OH = 224u;
+const uint PLANE = OW * OH;
 
 void main() {
-    int px = int(gl_GlobalInvocationID.x);
-    int py = int(gl_GlobalInvocationID.y);
-    int crop = px / 224;
-    int x = px % 224;
+    uvec3 gid = gl_GlobalInvocationID;
+    if (gid.x >= OW || gid.y >= OH || gid.z >= 5u) return;
 
-    vec2 srcUV = pc.offset[crop] + vec2(x, py) * pc.scale[crop];
-    ivec2 p0 = ivec2(floor(srcUV));
-    p0 = clamp(p0, ivec2(0), pc.srcSize - 1);
-    ivec2 p1 = clamp(p0 + ivec2(1), ivec2(0), pc.srcSize - 1);
-    
-    vec2 frac = srcUV - vec2(p0);
-    vec4 c00 = imageLoad(uSrc, p0);
-    vec4 c10 = imageLoad(uSrc, ivec2(p1.x, p0.y));
-    vec4 c01 = imageLoad(uSrc, ivec2(p0.x, p1.y));
-    vec4 c11 = imageLoad(uSrc, p1);
-    
-    vec4 col = mix(mix(c00, c10, frac.x), mix(c01, c11, frac.x), frac.y);
+    vec4 c = pc.crop[gid.z];
+    vec2 uv = c.xy + (vec2(gid.xy) + 0.5) * c.zw;
 
-    out_data[crop * 3*CSTEP + 0*CSTEP + py*224 + x] = (col.r - pc.mean.r) * pc.invStd.r;
-    out_data[crop * 3*CSTEP + 1*CSTEP + py*224 + x] = (col.g - pc.mean.g) * pc.invStd.g;
-    out_data[crop * 3*CSTEP + 2*CSTEP + py*224 + x] = (col.b - pc.mean.b) * pc.invStd.b;
+    vec3 rgb = textureLod(srcImg, uv, 0.0).rgb;
+    vec3 x = (rgb - pc.mean.xyz) * pc.invStd.xyz;
+
+    uint base = gid.z * 3u * PLANE;
+    uint idx  = gid.y * OW + gid.x;
+    outBuf.data[base + 0u * PLANE + idx] = x.r;
+    outBuf.data[base + 1u * PLANE + idx] = x.g;
+    outBuf.data[base + 2u * PLANE + idx] = x.b;
 }
