@@ -1,8 +1,8 @@
-#include <vulkan/vulkan.h>
+// 先 include ncnn（它会包含 vulkan_header_fix.h，我们之后再补全需要的 Vulkan 类型）
 #include <ncnn/net.h>
+#include <vulkan/vulkan.h>
 #include <iostream>
 #include <vector>
-#include <fstream>
 
 int main() {
     std::cout << "ncnn_mobileclip_vulkan skeleton" << std::endl;
@@ -31,6 +31,7 @@ int main() {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(devs[0], &props);
             std::cout << "Device: " << props.deviceName << std::endl;
+            std::cout << "Max push constants: " << props.limits.maxPushConstantsSize << std::endl;
         }
         vkDestroyInstance(inst, nullptr);
     } else {
