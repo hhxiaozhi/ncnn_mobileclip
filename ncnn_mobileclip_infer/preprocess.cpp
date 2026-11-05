@@ -90,7 +90,7 @@ static uint32_t pickComputeQueueFamily(VkPhysicalDevice phy) {
     uint32_t n = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(phy, &n, nullptr);
     std::vector<VkQueueFamilyProperties> q(n);
-    vkGetPhysicalDeviceQueueFamilyProperties(phy, &q, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(phy, &n, q.data());
     uint32_t fallback = 0xFFFFFFFFu;
     for (uint32_t i = 0; i < n; i++) {
         if (q[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
@@ -168,7 +168,7 @@ static int run(int argc, char** argv) {
         uint32_t n = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(p, &n, nullptr);
         std::vector<VkQueueFamilyProperties> q(n);
-        vkGetPhysicalDeviceQueueFamilyProperties(p, &q, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(p, &n, q.data());
         for (const VkQueueFamilyProperties& e : q)
             if (e.queueFlags & VK_QUEUE_COMPUTE_BIT) { phy = p; break; }
         if (phy) break;
