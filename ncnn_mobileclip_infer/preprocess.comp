@@ -1,0 +1,40 @@
+#version 450
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(binding = 0, rgba8) readonly uniform image2D uSrc;
+layout(std430, binding = 1) writeonly buffer OutBuf {
+    float out_data[];
+};
+
+layout(push_constant) uniform PC {
+    ivec2 srcSize;
+    vec2  scale[5];
+    vec2  offset[5];
+    vec3  mean, invStd;
+} pc;
+
+const int CSTEP = 50176; // 224*224
+
+void main() {
+    int px = int(gl_GlobalInvocationID.x);
+    int py = int(gl_GlobalInvocationID.y);
+    int crop = px / 224;
+    int x = px % 224;
+
+    vec2 srcUV = pc.offset[crop] + vec2(x, py) * pc.scale[crop];
+    ivec2 p0 = ivec2(floor(srcUV));
+    p0 = clamp(p0, ivec2(0), pc.srcSize - 1);
+    ivec2 p1 = clamp(p0 + ivec2(1), ivec2(0), pc.srcSize - 1);
+    
+    vec2 frac = srcUV - vec2(p0);
+    vec4 c00 = imageLoad(uSrc, p0);
+    vec4 c10 = imageLoad(uSrc, ivec2(p1.x, p0.y));
+    vec4 c01 = imageLoad(uSrc, ivec2(p0.x, p1.y));
+    vec4 c11 = imageLoad(uSrc, p1);
+    
+    vec4 col = mix(mix(c00, c10, frac.x), mix(c01, c11, frac.x), frac.y);
+
+    out_data[crop * 3*CSTEP + 0*CSTEP + py*224 + x] = (col.r - pc.mean.r) * pc.invStd.r;
+    out_data[crop * 3*CSTEP + 1*CSTEP + py*224 + x] = (col.g - pc.mean.g) * pc.invStd.g;
+    out_data[crop * 3*CSTEP + 2*CSTEP + py*224 + x] = (col.b - pc.mean.b) * pc.invStd.b;
+}
