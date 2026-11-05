@@ -1,27 +1,27 @@
-cmake_minimum_required(VERSION 3.31)
-project(ncnn_mobileclip_full)
-
+cmake_minimum_required(VERSION 3.10)
+project(ncnn_mobileclip_vulkan)
 set(CMAKE_CXX_STANDARD 20)
 
-# 导入ncnn
-set(ncnn_DIR 3rdparty/ncnn/lib/cmake/ncnn)
-set(ncnn_INCLUDE_DIRS 3rdparty/ncnn/include)
+find_package(ncnn REQUIRED)
+find_package(Vulkan REQUIRED)
 
-find_package(ncnn REQUIRED)    # 找到ncnn库
-include_directories(${ncnn_INCLUDE_DIRS})
+# 查找 glslangValidator
+find_program(GLSLANG_VALIDATOR glslangValidator)
+if(NOT GLSLANG_VALIDATOR)
+    message(FATAL_ERROR "glslangValidator not found!")
+endif()
 
-# 导入 OpenCV
-set(OpenCV_DIR 3rdparty/ocvm/x64/vc17/staticlib)
-find_package(OpenCV REQUIRED) # 找到opencv库
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-
-add_executable(ncnn_mobileclip_full main.cpp
-        MobileClip.cpp
-        SimpleTokenizer.cpp
+# 编译 shader
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/preprocess.spv
+    COMMAND ${GLSLANG_VALIDATOR} -V ${CMAKE_CURRENT_SOURCE_DIR}/preprocess.comp -o ${CMAKE_CURRENT_BINARY_DIR}/preprocess.spv
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/preprocess.comp
 )
+add_custom_target(shaders ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/preprocess.spv)
 
-target_link_libraries(ncnn_mobileclip_full
-    ncnn
-    ${OpenCV_LIBS}
+add_executable(ncnn_mobileclip_vulkan
+    main_vulkan.cpp
 )
+add_dependencies(ncnn_mobileclip_vulkan shaders)
+
+target_link_libraries(ncnn_mobileclip_vulkan ncnn Vulkan::Vulkan)
