@@ -143,8 +143,9 @@ static int run(int argc, char** argv) {
         pc.crop[i][2] = (float)rects[i].w / ((float)W * (float)OUT_W);
         pc.crop[i][3] = (float)rects[i].h / ((float)H * (float)OUT_H);
     }
-    const float imMean[3] = {0.485f, 0.456f, 0.406f};
-    const float imStd[3]  = {0.229f, 0.224f, 0.225f};
+    // MobileCLIP-S2 使用 mean=0, std=1（即仅 pixel/255 到 [0,1]）
+    const float imMean[3] = {0.0f, 0.0f, 0.0f};
+    const float imStd[3]  = {1.0f, 1.0f, 1.0f};
     for (uint32_t i = 0; i < 3; i++) {
         pc.mean[i] = imMean[i];
         pc.invStd[i] = 1.0f / imStd[i];
